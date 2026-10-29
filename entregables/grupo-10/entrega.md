@@ -7,7 +7,7 @@
 |---|---|---|
 | Moscuzza, Vicente | VicenteMoscuzza | Inventario y Exposición |
 | | | |
-| | | |
+| Di Grappa, Emiliano| EmiiDG | Detección |
 | | | |
 
 > Roles sugeridos: inventario, cambios/parche, detección, contención/comunicación.
