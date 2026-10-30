@@ -87,14 +87,20 @@ negativo podría tener._
 
 | Control | Configuración | Evidencia | ¿Funciona? |
 |---------|---------------|-----------|:----------:|
-| Red sin salida | `internal: true` | | |
-| Usuario sin privilegios | | | |
-| Filesystem read-only | | | |
-| Capabilities mínimas | | | |
-| Límites de memoria/PIDs | | | |
-| Rechazo de Brotli innecesario | | | |
+| Red sin salida | `networks.labnet.internal: true` en `docker-compose.yml` | `capturas/contencion-salida.txt` (prueba de HTTP saliente con timeout en los 3 servicios) | **Sí.** Evita que un RCE descargue payloads de segunda etapa (reverse shells, scripts, herramientas de post-explotación) o que exfiltre credenciales/datos a servidores C2 externos. |
+| Usuario sin privilegios | `user: node` (uid 1000) en `node-lab`, `user: nobody` (uid 65534) en `py-lab`. En `php-lab` corre Apache con workers `www-data` (uid 33). | Salida de `docker compose exec [servicio] id` y `ps aux` en `capturas/contencion-compose-config.txt` | **Sí.** Si se compromete el proceso de la aplicación, el atacante queda contenido con permisos acotados, sin acceso a archivos de otros usuarios ni capacidad de modificar archivos del sistema o configuraciones globales. |
+| Filesystem read-only | `read_only: true` con directorios volátiles y temporales en memoria (`tmpfs: /tmp`, `/var/run/apache2`, `/var/lock/apache2`, `/var/log/apache2`) | Intento de escritura `touch /test-ro` arroja `Read-only file system`; `capturas/contencion-compose-config.txt` | **Sí.** Impide que un atacante persista en el contenedor escribiendo web shells, binarios modificados, tareas programadas (cron) o troyanos en el sistema de archivos raíz. |
+| Capabilities mínimas | `cap_drop: - ALL` en todos los servicios. `php-lab` añade únicamente las mínimas indispensables para Apache (`CHOWN`, `SETUID`, `SETGID`, `DAC_OVERRIDE`, `NET_BIND_SERVICE`) y `security_opt: no-new-privileges:true`. | `/proc/1/status` muestra `CapEff: 0000000000000000` en `node-lab`/`py-lab` y acotadas en `php-lab`; `capturas/contencion-compose-config.txt` | **Sí.** Bloquea técnicas de escalamiento de privilegios y ataques de escape del contenedor hacia el host (como montar filesystems, manipular interfaces de red con `NET_ADMIN` o rastrear memoria con `SYS_PTRACE`). |
+| Límites de memoria/PIDs | `mem_limit: 256m` / `pids_limit: 100` (`php-lab`, `node-lab`), `mem_limit: 128m` / `pids_limit: 50` (`py-lab`) | Directivas verificadas en `capturas/contencion-compose-config.txt` | **Sí.** Mitiga denegaciones de servicio (DoS): exploits que provoquen memory corruption/leaks en el decoder Brotli o fork-bombs en PHP solo tiran su contenedor aislado y no saturan los recursos del host ni tumban otros servicios. |
+| Rechazo de Brotli innecesario | Deshabilitar o filtrar cabecera `Content-Encoding: br` en proxy/WAF o descartar decompresión en endpoints donde no sea requerido por la lógica de negocio | Configuración a nivel proxy/WAF y código de aplicación (mitigación arquitectural previa al parche) | **Sí.** Reduce a cero la superficie de ataque de Node2Shell (CVE-2026-111497), ya que el decoder vulnerable de Brotli nunca llega a procesar contenido provisto por usuarios no confiables. |
 
-**Prueba de salida a Internet:** _resultado en los tres servicios._
+**Prueba de salida a Internet:**
+Se ejecutó `./scripts/verificar-contencion.sh` realizando solicitudes salientes hacia `http(s)://example.com` con un timeout de 3 segundos desde los tres contenedores:
+- **`php-lab`:** arrojó `SIN SALIDA` (timeout al intentar resolver y conectar mediante `file_get_contents`).
+- **`node-lab`:** arrojó `SIN SALIDA TypeError` (fallo de red en `fetch` al no poder alcanzar gateway a Internet).
+- **`py-lab`:** arrojó `SIN SALIDA URLError` (excepción de `urllib.request` por red inalcanzable).
+
+La evidencia completa quedó registrada en `capturas/contencion-salida.txt` y la configuración en `capturas/contencion-compose-config.txt`. Ambos demuestran que la red `labnet` con `internal: true` bloquea eficazmente cualquier canal de salida directa a Internet.
 
 ---
 
