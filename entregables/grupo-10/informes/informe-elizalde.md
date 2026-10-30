@@ -2,7 +2,8 @@
 
 **Integrante:** Benjamín Elizalde (Rol: Comunicación e Integración)  
 **Fecha:** viernes 30/10/2026  
-**Destinatario:** gerente de operaciones / comité de crisis
+**Destinatario:** Gerente de Operaciones / Comité de Crisis  
+**Organización Asignada:** Servicios Digitales Cono Sur S.A. (Fintech / Pagos Electrónicos)  
 
 ---
 
