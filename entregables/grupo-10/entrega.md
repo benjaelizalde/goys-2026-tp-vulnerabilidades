@@ -6,7 +6,7 @@
 | Integrante | Usuario de GitHub | Rol en el TP |
 |---|---|---|
 | Moscuzza, Vicente | VicenteMoscuzza | Inventario y Exposición |
-| | | |
+| Rodrigo CapreDev | RodrigoCapreDev | Priorización y cambios/parche |
 | Di Grappa, Emiliano| EmiiDG | Detección |
 | Alvite, Damian | DamiiAlvite | Contención |
 | Elizalde, Benjamin | benjaelizalde | Comunicación e Integración |
@@ -29,11 +29,17 @@
 
 | Activo | CVSS | Explotación real | Exposición | Criticidad | Decisión y plazo |
 |--------|:----:|:----------------:|:----------:|:----------:|------------------|
-| | | | | | |
-| | | | | | |
-| | | | | | |
+| Portal PHP (`php-lab`) | 9.2 | Confirmada; ambos CVE están en CISA KEV | No expuesto en el laboratorio; se asume expuesto detrás de un proxy en producción | Crítica: portal web y Apache mod_php | Mitigación inmediata y parche a PHP 8.3.36 |
+| API Node.js (`node-lab`) | 9.2 | No confirmada; RCE demostrado en laboratorio | No expuesto en el laboratorio; exposición productiva asumida y no verificada | Alta: API que descomprime cuerpos Brotli no confiables | Parche a Node 22.23.4 dentro de 24 h; mientras tanto, restringir exposición y monitorear |
+| Servicio Python (`py-lab`) | 9.2 | No confirmada; RCE demostrado en laboratorio | No expuesto en el laboratorio; exposición productiva asumida y no verificada | Alta, pero menor que PHP por ser servicio interno | Actualizar Brotli a 1.2.1 y mantenerlo interno |
 
-**Justificación:** _¿por qué ese orden? ¿qué evidencia nueva cambiaría la decisión?_
+**Justificación:** PHP se prioriza primero porque combina CVSS 9.2, explotación real
+confirmada, presencia en CISA KEV y el mayor riesgo asociado a Apache mod_php. Node
+queda segundo porque recibe contenido Brotli no confiable y tiene RCE demostrado en
+laboratorio, aunque no hay explotación real confirmada. Python queda tercero por ser
+interno en el laboratorio y no tener explotación confirmada. La confirmación de un
+proxy expuesto, una alerta de explotación o datos críticos en Node/Python elevaría su
+prioridad; una prueba de que PHP no recibe tráfico no confiable la reduciría.
 
 ---
 
@@ -41,12 +47,19 @@
 
 | Fecha/hora | Activo | Cambio | Antes | Después | Reversión |
 |------------|--------|--------|-------|---------|-----------|
-| | | | | | |
-| | | | | | |
+| 29/10/2026 | PHP (`php-lab`) | Mitigación provisoria: editar `laboratorio/php/php.ini`, poner `session.upload_progress.enabled = 0` y reiniciar | PHP 8.3.35; `session.upload_progress.enabled=1` | PHP 8.3.35; `session.upload_progress.enabled=0`; contenedor healthy | Restaurar `session.upload_progress.enabled = 1` y reiniciar `php-lab` |
+| 29/10/2026 | PHP (`php-lab`) | Actualizar imagen con `PHP_TAG=8.3.36-apache` | PHP 8.3.35 | PHP 8.3.36; contenedor healthy | Volver a `PHP_TAG=8.3.35-apache` y recrear el servicio |
+| 29/10/2026 | Python (`py-lab`) | Actualizar dependencia con `BROTLI_VERSION=1.2.1` | Brotli 1.0.9 | Brotli 1.2.1; contenedor healthy | Volver a `BROTLI_VERSION=1.0.9` y recrear el servicio |
+| 29/10/2026 | Node.js (`node-lab`) | Actualizar imagen con `NODE_TAG=22.23.4-bookworm-slim` | Node 22.23.3 | Node 22.23.4; `process.versions.brotli=1.1.0`; contenedor healthy | Volver a `NODE_TAG=22.23.3-bookworm-slim` y recrear el servicio |
 
-**Prueba funcional mínima:** _¿qué verificaron para saber que la app sigue viva?_
+**Prueba funcional mínima:** se verificó que los tres contenedores quedaron `healthy`.
+PHP pudo abrir el puerto 80 local, Node respondió correctamente a una solicitud HTTP
+en `/` y Python respondió HTTP `200` en `/`.
 
-**Qué no se pudo probar:** _declararlo explícitamente._
+**Qué no se pudo probar:** no se verificó la exposición productiva detrás de un proxy,
+porque el laboratorio no incluye ese componente. El primer intento de build de Node
+falló por `UNABLE_TO_VERIFY_LEAF_SIGNATURE`; después de cambiar de red, el build se
+completó correctamente sin desactivar la verificación TLS.
 
 ---
 
