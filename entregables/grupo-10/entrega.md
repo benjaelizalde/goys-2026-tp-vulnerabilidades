@@ -9,9 +9,7 @@
 | | | |
 | Di Grappa, Emiliano| EmiiDG | Detección |
 | | | |
-
-> Roles sugeridos: inventario, cambios/parche, detección, contención/comunicación.
-> Todos tienen que poder explicar su parte y una parte ajena.
+| Elizalde, Benjamin | benjaelizalde | Comunicación e Integración |
 
 ---
 
