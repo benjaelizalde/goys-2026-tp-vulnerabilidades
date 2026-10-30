@@ -65,21 +65,31 @@ completó correctamente sin desactivar la verificación TLS.
 
 ## 4. Detección y caza
 
-**Hipótesis:** _una frase: proceso, padre, horario, evidencia esperada._
+**Hipótesis:** Buscamos procesos anómalos o de evasión lanzados por los procesos web (`apache2`, `node`, `python`) entre las 09:40 y las 09:46 UTC del 27/10/2026, específicamente intérpretes de comandos (`sh`, `bash`) o herramientas de red (`curl`, `wget`) que evidencien ejecución remota de código o descarga de payloads.
 
 **Hallazgos en `audit.log`:**
 
 | Línea / timestamp | Host | Padre → hijo | ¿Anómalo? | Por qué |
 |-------------------|------|--------------|:---------:|---------|
-| | | | | |
-| | | | | |
+| 09:42:17–09:42:18 | `web01` | `apache2` → `sh` → `id` | Sí | Un worker de Apache engendra un shell para ejecutar reconocimiento de privilegios (`id`). Indicio claro de explotación RCE en PHP. |
+| 09:43:03–09:43:04 | `api01` | `node` → `sh` → `curl` | Sí | El runtime de Node.js engendra `sh` e intenta invocar `curl` hacia una IP aparente. |
+| 09:44:22 | `web01` | `apache2` → `wget` | Sí | Apache ejecuta directamente `wget` intentando descargar un payload secundario. |
+| 09:45:10–09:45:11 | `svc01` | `python` → `sh` → `uname` | Dudoso / Revisar | Python ejecuta reconocimiento de sistema (`uname -a`). Anómalo para un backend salvo tareas diagnósticas. |
 
-**¿Hay compromiso?** _sí/no/indeterminado, con evidencia._
+**¿Hay compromiso?** **Indeterminado / Indicios de intrusión sin confirmación plena.** Se observan secuencias de ejecución anómalas e intentos de reconocimiento/descarga (`id`, `curl`, `wget`), pero el log sintético no evidencia si los comandos tuvieron éxito, el entorno carece de salida a Internet y las IPs pertenecen a bloques de documentación (RFC 5737).
 
-**Regla propuesta para Node.js:** _qué proceso observa, qué condición y qué falso
-negativo podría tener._
+**Regla propuesta para Node.js:**
+- *Condición:* `ppid_comm == "node"` y `comm in ["sh", "bash", "curl", "wget"]`.
+- *Observa:* Intérpretes de comandos y utilidades de transferencia invocados por el runtime de Node.js.
+- *Falsos negativos:* Ejecución directa de binarios sin pasar por shell, conexiones de red o exfiltración realizadas nativamente desde el código JavaScript (sin invocar subprocesos del OS), o herramientas invocadas por nietos en la jerarquía (ej. `node` → `sh` → `curl` donde `curl` tiene PPID de `sh`).
 
-**Limitaciones del log:** _usuario, IP de origen, retención, ruido, etc._
+**Limitaciones del log:**
+- Ausencia de contexto de usuario (UID/GID) e IP de origen de la solicitud HTTP.
+- Ventana temporal acotada sin trazabilidad histórica ni retención.
+- Falta de telemetría de red para verificar si hubo conexiones establecidas o exfiltración efectiva.
+- Sin logs de aplicación (Apache/Node access y error logs) para correlacionar solicitudes con procesos.
+
+_Detalle completo en [`deteccion.md`](deteccion.md)._
 
 ---
 
@@ -106,20 +116,24 @@ La evidencia completa quedó registrada en `capturas/contencion-salida.txt` y la
 
 ## 6. Conclusión (5 líneas)
 
-_¿Qué harían distinto en las primeras 2 horas?_
+En las primeras 2 horas no hubiéramos intentado parches de código apresurados en caliente, sino aislar y contener la exposición: verificar el inventario frente a CISA KEV, bloquear el procesamiento innecesario de compresión Brotli en el proxy y desactivar `session.upload_progress.enabled` en PHP de inmediato.
+Con esa contención perimetral activa, habríamos evitado la interrupción del servicio mientras se preparaban las imágenes corregidas.
+Luego habríamos validado el entorno de pruebas, comprobando que las pruebas funcionales mínimas y el procedimiento de rollback estuvieran documentados antes de tocar producción.
+En paralelo, habríamos desplegado monitoreo específico sobre procesos anómalos (`auditd`/EDR) para cazar shells hijos de los runtimes web sin depender de conjeturas.
+Finalmente, habríamos establecido un canal de comunicación transparente hacia el comité y los clientes, informando medidas preventivas sin revelar vectores de ataque que beneficien a terceros.
 
 ---
 
 ## 7. Checklist antes de entregar
 
-- [ ] El laboratorio arrancó y los 3 servicios quedaron `healthy`.
-- [ ] Inventario con evidencia (versión, SAPI, configuración).
-- [ ] Matriz con decisión y plazo.
-- [ ] Parche aplicado y verificado; reversión documentada.
-- [ ] Al menos 3 controles de contención probados.
-- [ ] `deteccion.md` completo.
+- [x] El laboratorio arrancó y los 3 servicios quedaron `healthy`.
+- [x] Inventario con evidencia (versión, SAPI, configuración).
+- [x] Matriz con decisión y plazo.
+- [x] Parche aplicado y verificado; reversión documentada.
+- [x] Al menos 3 controles de contención probados.
+- [x] `deteccion.md` completo.
 - [ ] `informe.md` individual completo.
-- [ ] Sin claves, tokens ni placeholders.
+- [x] Sin claves, tokens ni placeholders.
 - [ ] Repo pusheado y PR abierto.
 
 Checklist completa: [`../docs/checklist-entrega.md`](../docs/checklist-entrega.md).
