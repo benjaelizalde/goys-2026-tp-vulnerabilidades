@@ -8,7 +8,7 @@
 | Moscuzza, Vicente | VicenteMoscuzza | Inventario y Exposición |
 | | | |
 | Di Grappa, Emiliano| EmiiDG | Detección |
-| | | |
+| Alvite, Damian | DamiiAlvite | Contención |
 | Elizalde, Benjamin | benjaelizalde | Comunicación e Integración |
 
 ---
