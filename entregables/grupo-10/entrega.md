@@ -1,12 +1,14 @@
 # Entregable — TP PHP2Shell / Node2Shell
 
-**Grupo:** 10 · **Fork del grupo:** benjaelizalde/goys-2026-tp-vulnerabilidades · **Rama:** `grupo-10`
-**Fecha:** jueves 29/10/2026
+**Grupo:** 10  
+**Fork del grupo:** benjaelizalde/goys-2026-tp-vulnerabilidades  
+**Rama:** `grupo-10`  
+**Fecha:** viernes 30/10/2026
 
 | Integrante | Usuario de GitHub | Rol en el TP |
 |---|---|---|
 | Moscuzza, Vicente | VicenteMoscuzza | Inventario y Exposición |
-| Rodrigo CapreDev | RodrigoCapreDev | Priorización y cambios/parche |
+| Rodrigo Capre | RodrigoCapreDev | Priorización y cambios/parche |
 | Di Grappa, Emiliano| EmiiDG | Detección |
 | Alvite, Damian | DamiiAlvite | Contención |
 | Elizalde, Benjamin | benjaelizalde | Comunicación e Integración |
@@ -132,8 +134,6 @@ Finalmente, habríamos establecido un canal de comunicación transparente hacia 
 - [x] Parche aplicado y verificado; reversión documentada.
 - [x] Al menos 3 controles de contención probados.
 - [x] `deteccion.md` completo.
-- [ ] `informe.md` individual completo.
+- [x] `informe.md` individual completo.
 - [x] Sin claves, tokens ni placeholders.
-- [ ] Repo pusheado y PR abierto.
-
-Checklist completa: [`../docs/checklist-entrega.md`](../docs/checklist-entrega.md).
+- [x] Repo pusheado y PR abierto.
